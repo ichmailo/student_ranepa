@@ -6,7 +6,6 @@ class MD5HashDict:
         self._data = {}  # {md5_hash: (original_key, value)}
         if args or kwargs:
             self.update(*args, **kwargs)
-
     def __setitem__(self, key, value):
         hashed_key = self._hash_key(key)
         self._data[hashed_key] = (key, value)
