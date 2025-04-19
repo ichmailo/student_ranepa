@@ -1,5 +1,11 @@
 # student_ranepa
+import hashlib
 
+class MD5Dict:
+    def __init__(self, *args, **kwargs):
+        self.table = {}
+        self.reverse_lookup = {}  # Для хранения оригинальных ключей
+        self.update(*args, **kwargs)
     
     def _hash(self, key):
         # Создаем MD5 хэш от ключа
@@ -101,5 +107,3 @@
     def __repr__(self):
         items = ', '.join(f'{k!r}: {v!r}' for k, v in self.items())
         return f'MD5Dict({{{items}}})'
-
-
