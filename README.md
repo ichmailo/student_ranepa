@@ -1,50 +1,69 @@
 # student_ranepa
 
+    
+    def _hash(self, key):
+        # Создаем MD5 хэш от ключа
+        md5 = hashlib.md5()
+        md5.update(str(key).encode('utf-8'))
+        return md5.hexdigest()
+    
+    def __setitem__(self, key, value):
+        hashed_key = self._hash(key)
+        self.table[hashed_key] = value
+        self.reverse_lookup[hashed_key] = key
+    
     def __getitem__(self, key):
-        hashed_key = self._hash_key(key)
-        return self._data[hashed_key][1]
-
+        hashed_key = self._hash(key)
+        return self.table[hashed_key]
+    
     def __delitem__(self, key):
-        hashed_key = self._hash_key(key)
-        del self._data[hashed_key]
-
-    def __contains__(self, key):
-        hashed_key = self._hash_key(key)
-        return hashed_key in self._data
-
-    def __len__(self):
-        return len(self._data)
-
-    def __repr__(self):
-        return repr({k: v for k, v in self.items()})
-
-    def _hash_key(self, key):
-        key_str = str(key).encode('utf-8')
-        return hashlib.md5(key_str).hexdigest()
-
-    def keys(self):
-        return [original_key for original_key, _ in self._data.values()]
-
-    def values(self):
-        return [value for _, value in self._data.values()]
-
-    def items(self):
-        return [(original_key, value) for original_key, value in self._data.values()]
-
+        hashed_key = self._hash(key)
+        del self.table[hashed_key]
+        del self.reverse_lookup[hashed_key]
+    
     def get(self, key, default=None):
-        hashed_key = self._hash_key(key)
-        if hashed_key in self._data:
-            return self._data[hashed_key][1]
-        return default
-
+        hashed_key = self._hash(key)
+        return self.table.get(hashed_key, default)
+    
+    def keys(self):
+        # Возвращаем оригинальные ключи
+        return self.reverse_lookup.values()
+    
+    def values(self):
+        return self.table.values()
+    
+    def items(self):
+        return [(self.reverse_lookup[k], v) for k, v in self.table.items()]
+    
+    def pop(self, key, default=None):
+        hashed_key = self._hash(key)
+        if hashed_key in self.table:
+            value = self.table.pop(hashed_key)
+            original_key = self.reverse_lookup.pop(hashed_key)
+            return value
+        if default is not None:
+            return default
+        raise KeyError(key)
+    
+    def popitem(self):
+        if not self.table:
+            raise KeyError('popitem(): dictionary is empty')
+        hashed_key, value = self.table.popitem()
+        original_key = self.reverse_lookup.pop(hashed_key)
+        return (original_key, value)
+    
     def setdefault(self, key, default=None):
-        hashed_key = self._hash_key(key)
-        if hashed_key not in self._data:
-            self._data[hashed_key] = (key, default)
-        return self._data[hashed_key][1]
-
-    def update(self, other=None, **kwargs):
-        if other is not None:
+        hashed_key = self._hash(key)
+        if hashed_key not in self.table:
+            self.table[hashed_key] = default
+            self.reverse_lookup[hashed_key] = key
+        return self.table[hashed_key]
+    
+    def update(self, *args, **kwargs):
+        if args:
+            if len(args) > 1:
+                raise TypeError("update expected at most 1 argument, got %d" % len(args))
+            other = args[0]
             if hasattr(other, 'items'):
                 for key, value in other.items():
                     self[key] = value
@@ -53,35 +72,34 @@
                     self[key] = value
         for key, value in kwargs.items():
             self[key] = value
-
-    def pop(self, key, default=None):
-        hashed_key = self._hash_key(key)
-        if hashed_key in self._data:
-            value = self._data.pop(hashed_key)[1]
-            return value
-        if default is not None:
-            return default
-        raise KeyError(key)
-
-    def popitem(self):
-        if not self._data:
-            raise KeyError("popitem(): dictionary is empty")
-        hashed_key = next(iter(self._data))
-        original_key, value = self._data.pop(hashed_key)
-        return (original_key, value)
-
+        return None
+    
     def clear(self):
-        self._data.clear()
-
+        self.table.clear()
+        self.reverse_lookup.clear()
+    
     def copy(self):
-        new_dict = MD5HashDict()
-        new_dict._data = self._data.copy()
+        new_dict = MD5Dict()
+        new_dict.table = self.table.copy()
+        new_dict.reverse_lookup = self.reverse_lookup.copy()
         return new_dict
-
+    
     @classmethod
-    def fromkeys(cls, iterable, value=None):
+    def fromkeys(cls, seq, value=None):
         new_dict = cls()
-        for key in iterable:
+        for key in seq:
             new_dict[key] = value
         return new_dict
-      
+    
+    def __contains__(self, key):
+        hashed_key = self._hash(key)
+        return hashed_key in self.table
+    
+    def __len__(self):
+        return len(self.table)
+    
+    def __repr__(self):
+        items = ', '.join(f'{k!r}: {v!r}' for k, v in self.items())
+        return f'MD5Dict({{{items}}})'
+
+
